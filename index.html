@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Sustainability Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom, #8fd3f4, #84fab0);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      color: #333;
+      overflow-x: hidden;
+      transition: background 0.5s ease;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 450px;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      animation: fadeIn 0.5s ease-in-out;
+      margin-top: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #4caf50;
+      margin-bottom: 20px;
+    }
+
+    .input-field, .file-input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease;
+    }
+
+    .button:hover {
+      background-color: #45a049;
+    }
+
+    .eco-challenge {
+      background: #f7f7f7;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 20px 0;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .eco-challenge h3 {
+      color: #28a745;
+    }
+
+    .verification-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .notification {
+      background-color: #ffcc00;
+      color: #333;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 10px 0;
+      font-size: 1rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container" class="container">
+    <h2>Complete Challenges</h2>
+
+    <div class="eco-challenge">
+      <h3>Recycling Challenge</h3>
+      <p>Upload a photo or request a friend to verify your completion.</p>
+
+      <div class="verification-options">
+        <input type="file" id="photo-upload" class="file-input">
+        <button class="button" onclick="submitPhotoVerification('Recycling')">Upload & Verify</button>
+
+        <select id="peer-list" class="input-field">
+          <option value="">Select a friend for verification</option>
+        </select>
+        <button class="button" onclick="requestPeerVerification('Recycling')">Request Peer Verification</button>
+      </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <h2>Friend Requests</h2>
+    <ul id="peer-requests"></ul>
+
+    <button class="button" onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    let friends = ["Alice", "Bob", "Charlie"]; // Example friend list
+    let peerRequests = [];
+
+    function updateFriendList() {
+      let select = document.getElementById("peer-list");
+      select.innerHTML = '<option value="">Select a friend for verification</option>';
+      friends.forEach(friend => {
+        let option = document.createElement("option");
+        option.value = friend;
+        option.textContent = friend;
+        select.appendChild(option);
+      });
+    }
+
+    function submitPhotoVerification(challenge) {
+      let fileInput = document.getElementById("photo-upload");
+      if (fileInput.files.length === 0) {
+        showNotification("Please upload a photo for verification!");
+        return;
+      }
+
+      let reader = new FileReader();
+      reader.onload = function () {
+        localStorage.setItem(`photo-${challenge}`, reader.result);
+        awardCoins(challenge);
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    }
+
+    function requestPeerVerification(challenge) {
+      let selectedFriend = document.getElementById("peer-list").value;
+      if (!selectedFriend) {
+        showNotification("Please select a friend for verification.");
+        return;
+      }
+
+      peerRequests.push({ friend: selectedFriend, challenge: challenge });
+      updatePeerRequests();
+      showNotification(`Verification request sent to ${selectedFriend}`);
+    }
+
+    function updatePeerRequests() {
+      let requestList = document.getElementById("peer-requests");
+      requestList.innerHTML = "";
+      peerRequests.forEach((request, index) => {
+        let li = document.createElement("li");
+        li.textContent = `${request.friend} needs to verify "${request.challenge}"`;
+        let verifyBtn = document.createElement("button");
+        verifyBtn.textContent = "Approve";
+        verifyBtn.classList.add("button");
+        verifyBtn.onclick = function () {
+          approvePeerVerification(index);
+        };
+        li.appendChild(verifyBtn);
+        requestList.appendChild(li);
+      });
+    }
+
+    function approvePeerVerification(index) {
+      let request = peerRequests[index];
+      awardCoins(request.challenge);
+      peerRequests.splice(index, 1);
+      updatePeerRequests();
+      showNotification(`${request.challenge} verified successfully!`);
+    }
+
+    function awardCoins(challenge) {
+      let coins = parseInt(localStorage.getItem("total-coins") || "0");
+      let earnedCoins = 10;
+      localStorage.setItem("total-coins", coins + earnedCoins);
+      showNotification(`${earnedCoins} coins earned for completing ${challenge}!`);
+    }
+
+    function showNotification(message) {
+      let notification = document.getElementById("notification");
+      notification.textContent = message;
+      notification.style.display = "block";
+      setTimeout(() => {
+        notification.style.display = "none";
+      }, 3000);
+    }
+
+    function logout() {
+      localStorage.removeItem("total-coins");
+      showNotification("Logged out successfully.");
+      setTimeout(() => window.location.reload(), 1500);
+    }
+
+    updateFriendList();
+  </script>
+</body>
+</html>
