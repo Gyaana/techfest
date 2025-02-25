@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Sustainability Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom, #8fd3f4, #84fab0);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    .container, .eco-container {
+      width: 100%;
+      max-width: 450px;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    h2 {
+      color: #4caf50;
+    }
+
+    .input-field, input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .button:hover {
+      background-color: #45a049;
+    }
+
+    .notification {
+      background-color: #ffcc00;
+      color: #333;
+      padding: 12px;
+      border-radius: 10px;
+      display: none;
+      text-align: center;
+    }
+
+    .eco-container {
+      display: none;
+    }
+
+    .challenge-log p {
+      background: #ddd;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 5px;
+    }
+
+    .peer-verification p {
+      margin: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login and Signup -->
+  <div id="login-container" class="container">
+    <h2>Login</h2>
+    <input type="text" id="username" class="input-field" placeholder="Username">
+    <input type="password" id="password" class="input-field" placeholder="Password">
+    <button class="button" onclick="login()">Login</button>
+  </div>
+
+  <!-- App Content -->
+  <div id="app-container" class="container" style="display:none;">
+    <h2>Welcome, <span id="user-name"></span></h2>
+    <button class="button" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- Eco Challenge App -->
+  <div id="eco-container" class="eco-container">
+    <h1>Eco Challenges</h1>
+    <h2>Coins: <span id="total-coins">0</span></h2>
+
+    <div class="eco-challenge">
+      <h3>Complete Challenges</h3>
+      <input type="file" id="proof-photo" accept="image/*">
+      <button onclick="submitChallenge('Recycling')">Recycle</button>
+      <button onclick="submitChallenge('Composting')">Compost</button>
+      <button onclick="submitChallenge('Plant Trees')">Plant Trees</button>
+      <button onclick="submitChallenge('Save Energy')">Save Energy</button>
+    </div>
+
+    <h3>Pending Peer Verifications</h3>
+    <div id="pending-verification"></div>
+
+    <h3>Challenge Log</h3>
+    <div id="challenge-log"></div>
+  </div>
+
+  <div class="notification" id="notification"></div>
+
+  <script>
+    let storedUsers = {};
+
+    function login() {
+      const username = document.getElementById('username').value.trim();
+      if (!username) {
+        showNotification("Enter a username!");
+        return;
+      }
+      localStorage.setItem('username', username);
+      showApp();
+    }
+
+    function showApp() {
+      const username = localStorage.getItem('username');
+      document.getElementById('user-name').textContent = username;
+      document.getElementById('login-container').style.display = 'none';
+      document.getElementById('app-container').style.display = 'block';
+      document.getElementById('eco-container').style.display = 'block';
+      updateCoins();
+      loadChallenges();
+    }
+
+    function logout() {
+      localStorage.removeItem('username');
+      document.getElementById('login-container').style.display = 'block';
+      document.getElementById('app-container').style.display = 'none';
+      document.getElementById('eco-container').style.display = 'none';
+    }
+
+    function showNotification(message) {
+      const notification = document.getElementById("notification");
+      notification.textContent = message;
+      notification.style.display = "block";
+      setTimeout(() => notification.style.display = "none", 3000);
+    }
+
+    function submitChallenge(challenge) {
+      const proofPhoto = document.getElementById('proof-photo').files[0];
+      if (!proofPhoto) {
+        showNotification("Upload proof of completion!");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const imageBase64 = event.target.result;
+        const username = localStorage.getItem('username');
+        const challenges = JSON.parse(localStorage.getItem('challenges') || '[]');
+
+        const challengeId = `${challenge}-${new Date().toISOString()}`;
+        challenges.push({ username, challenge, challengeId, status: "pending", image: imageBase64 });
+
+        localStorage.setItem('challenges', JSON.stringify(challenges));
+        showNotification(`${challenge} submitted for verification!`);
+        loadChallenges();
+      };
+      reader.readAsDataURL(proofPhoto);
+    }
+
+    function loadChallenges() {
+      const challenges = JSON.parse(localStorage.getItem('challenges') || '[]');
+      const challengeLog = document.getElementById('challenge-log');
+      const pendingVerification = document.getElementById('pending-verification');
+      challengeLog.innerHTML = '';
+      pendingVerification.innerHTML = '';
+
+      challenges.forEach((challenge, index) => {
+        challengeLog.innerHTML += `<p>${index + 1}. ${challenge.challenge} - ${challenge.status}</p>`;
+
+        if (challenge.status === "pending") {
+          pendingVerification.innerHTML += `
+            <p><strong>${challenge.username}</strong> submitted: ${challenge.challenge}</p>
+            <img src="${challenge.image}" width="100" style="border-radius:10px;"><br>
+            <button onclick="verifyChallenge('${challenge.challengeId}', 'approved')">Approve</button>
+            <button onclick="verifyChallenge('${challenge.challengeId}', 'denied')">Deny</button>
+          `;
+        }
+      });
+
+      updateCoins();
+    }
+
+    function verifyChallenge(challengeId, status) {
+      let challenges = JSON.parse(localStorage.getItem('challenges') || '[]');
+      const challengeIndex = challenges.findIndex(challenge => challenge.challengeId === challengeId);
+
+      if (challengeIndex !== -1) {
+        challenges[challengeIndex].status = status;
+        localStorage.setItem('challenges', JSON.stringify(challenges));
+
+        if (status === "approved") {
+          const coinsAwarded = calculateCoins(challenges[challengeIndex].challenge);
+          showNotification(`Challenge approved! Earned ${coinsAwarded} coins.`);
+        } else {
+          showNotification("Challenge denied.");
+        }
+      }
+      loadChallenges();
+    }
+
+    function calculateCoins(challenge) {
+      return { "Recycling": 10, "Composting": 15, "Plant Trees": 20, "Save Energy": 25 }[challenge] || 0;
+    }
+
+    function updateCoins() {
+      const challenges = JSON.parse(localStorage.getItem('challenges') || '[]');
+      const coins = challenges.reduce((sum, challenge) => sum + (challenge.status === 'approved' ? calculateCoins(challenge.challenge) : 0), 0);
+      document.getElementById('total-coins').textContent = coins;
+    }
+  </script>
+
+</body>
+</html>
